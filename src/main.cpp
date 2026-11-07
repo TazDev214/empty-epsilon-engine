@@ -126,7 +126,7 @@ int main(int argc, char** argv)
 #else
     Logging::setLogLevel(LOGLEVEL_INFO);
 #endif
-#if defined(_WIN32) && !defined(DEBUG)
+#if defined(_WIN32)
     Logging::setLogFile("EmptyEpsilon.log");
 #endif
     LOG(Info, "Starting...");

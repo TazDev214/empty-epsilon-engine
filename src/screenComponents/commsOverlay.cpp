@@ -1,4 +1,5 @@
 #include "playerInfo.h"
+#include "veyraCrew.h"
 #include "spaceObjects/playerSpaceship.h"
 #include "commsOverlay.h"
 #include "gui/gui2_panel.h"
@@ -150,16 +151,25 @@ void GuiCommsOverlay::onUpdate()
     // If we're on a ship, show comms activity on draw.
     if (my_spaceship)
     {
+        const bool may_answer = veyraIsDecisionMaker(my_player_info, my_spaceship->getMultiplayerId());
+        opening_cancel->setVisible(may_answer);
+        hailed_answer->setVisible(may_answer);
+        hailed_ignore->setVisible(may_answer);
+        script_comms_options->setEnable(may_answer);
+        script_comms_close->setVisible(may_answer);
+        chat_comms_message_entry->setEnable(may_answer);
+        chat_comms_send_button->setVisible(may_answer);
+        chat_comms_close_button->setVisible(may_answer);
         opening_box->setVisible(my_spaceship->isCommsOpening());
         opening_progress->setValue(my_spaceship->getCommsOpeningDelay());
 
         hailed_box->setVisible(my_spaceship->isCommsBeingHailed());
         hailed_label->setText(tr("Hailed by {name}").format({{"name", my_spaceship->getCommsTargetName()}}));
 
-        no_response_box->setVisible(my_spaceship->isCommsFailed());
+        no_response_box->setVisible(may_answer && my_spaceship->isCommsFailed());
 
-        broken_box->setVisible(my_spaceship->isCommsBroken());
-        closed_box->setVisible(my_spaceship->isCommsClosed());
+        broken_box->setVisible(may_answer && my_spaceship->isCommsBroken());
+        closed_box->setVisible(may_answer && my_spaceship->isCommsClosed());
 
         chat_comms_box->setVisible(my_spaceship->isCommsChatOpen());
         chat_comms_text->setText(my_spaceship->getCommsIncommingMessage());

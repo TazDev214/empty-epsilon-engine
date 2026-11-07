@@ -8,7 +8,7 @@
 #include "main.h"
 
 EpsilonServer::EpsilonServer(int server_port)
-: GameServer("Server", VERSION_NUMBER, server_port)
+: GameServer("Server", VERSION_NUMBER, PreferencesManager::get("veyra_test_port", string(server_port)).toInt())
 {
     if (game_server)
     {

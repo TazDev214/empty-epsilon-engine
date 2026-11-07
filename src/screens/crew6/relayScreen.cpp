@@ -20,8 +20,8 @@
 #include "gui/gui2_togglebutton.h"
 
 
-RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
-: GuiOverlay(owner, "RELAY_SCREEN", colorConfig.background), mode(TargetSelection)
+RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms, bool read_only_mode)
+: GuiOverlay(owner, "RELAY_SCREEN", colorConfig.background), read_only(read_only_mode), mode(TargetSelection)
 {
     targets.setAllowWaypointSelection();
     radar = new GuiRadarView(this, "RELAY_RADAR", 50000.0f, &targets);
@@ -30,7 +30,7 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
     radar->setPosition(0, 0, sp::Alignment::TopLeft)->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax);
     radar->setCallbacks(
         [this](sp::io::Pointer::Button button, glm::vec2 position) { //down
-            if (mode == TargetSelection && targets.getWaypointIndex() > -1 && my_spaceship)
+            if (!read_only && mode == TargetSelection && targets.getWaypointIndex() > -1 && my_spaceship)
             {
                 if (glm::length(my_spaceship->waypoints[targets.getWaypointIndex()] - position) < 1000.0f)
                 {
@@ -43,10 +43,12 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
         [this](glm::vec2 position) { //drag
             if (mode == TargetSelection)
                 radar->setViewPosition(radar->getViewPosition() - (position - mouse_down_position));
-            if (mode == MoveWaypoint && my_spaceship)
+            if (!read_only && mode == MoveWaypoint && my_spaceship)
                 my_spaceship->commandMoveWaypoint(drag_waypoint_index, position);
         },
         [this](glm::vec2 position) { //up
+            // Read-only maps may select contacts, but never execute action modes.
+            if (read_only && mode != TargetSelection) return;
             switch(mode)
             {
             case TargetSelection:
@@ -105,6 +107,7 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
 
     // Hack target
     hack_target_button = new GuiButton(option_buttons, "HACK_TARGET", tr("Start hacking"), [this](){
+        if (read_only) return;
         P<SpaceObject> target = targets.get();
         if (my_spaceship && target && target->canBeHackedBy(my_spaceship))
         {
@@ -115,6 +118,7 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
 
     // Link probe to science button.
     link_to_science_button = new GuiToggleButton(option_buttons, "LINK_TO_SCIENCE", tr("Link to Science"), [this](bool value){
+        if (read_only) return;
         if (value)
         {
             my_spaceship->commandSetScienceLink(targets.get());
@@ -128,11 +132,13 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
 
     // Manage waypoints.
     (new GuiButton(option_buttons, "WAYPOINT_PLACE_BUTTON", tr("Place Waypoint"), [this]() {
+        if (read_only) return;
         mode = WaypointPlacement;
         option_buttons->hide();
     }))->setSize(GuiElement::GuiSizeMax, 50);
 
     delete_waypoint_button = new GuiButton(option_buttons, "WAYPOINT_DELETE_BUTTON", tr("Delete Waypoint"), [this]() {
+        if (read_only) return;
         if (my_spaceship && targets.getWaypointIndex() >= 0)
         {
             my_spaceship->commandRemoveWaypoint(targets.getWaypointIndex());
@@ -142,6 +148,7 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
 
     // Launch probe button.
     launch_probe_button = new GuiButton(option_buttons, "LAUNCH_PROBE_BUTTON", tr("Launch Probe"), [this]() {
+        if (read_only) return;
         mode = LaunchProbe;
         option_buttons->hide();
     });
@@ -155,13 +162,23 @@ RelayScreen::RelayScreen(GuiContainer* owner, bool allow_comms)
     info_clock = new GuiKeyValueDisplay(option_buttons, "INFO_CLOCK", 0.4f, tr("Clock") + ":", "");
     info_clock->setSize(GuiElement::GuiSizeMax, 40);
 
-    (new GuiAlertLevelSelect(this, ""))->setPosition(-20, -70, sp::Alignment::BottomRight)->setSize(300, GuiElement::GuiSizeMax)->setAttribute("layout", "verticalbottom");
-
-    (new GuiCustomShipFunctions(this, relayOfficer, ""))->setPosition(-20, 240, sp::Alignment::TopRight)->setSize(250, GuiElement::GuiSizeMax);
+    if (!read_only)
+    {
+        (new GuiAlertLevelSelect(this, ""))->setPosition(-20, -70, sp::Alignment::BottomRight)->setSize(300, GuiElement::GuiSizeMax)->setAttribute("layout", "verticalbottom");
+        (new GuiCustomShipFunctions(this, relayOfficer, ""))->setPosition(-20, 240, sp::Alignment::TopRight)->setSize(250, GuiElement::GuiSizeMax);
+    }
+    else
+    {
+        // Keep controls constructed for onDraw(), but hide their whole parent.
+        // This also hides Link to Comms; per-frame child visibility cannot expose them.
+        option_buttons->hide();
+        (new GuiLabel(this, "READ_ONLY_MAP", tr("Overview only"), 25))
+            ->setPosition(20, 50, sp::Alignment::TopLeft)->setSize(350, 40);
+    }
 
     hacking_dialog = new GuiHackingDialog(this, "");
 
-    if (allow_comms)
+    if (allow_comms && !read_only)
     {
         new ShipsLog(this);
         (new GuiCommsOverlay(this))->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax);

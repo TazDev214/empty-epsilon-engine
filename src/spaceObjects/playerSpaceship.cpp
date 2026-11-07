@@ -1,4 +1,5 @@
 #include "playerSpaceship.h"
+#include "veyraCrew.h"
 #include "gui/colorConfig.h"
 #include "repairCrew.h"
 #include "explosionEffect.h"
@@ -573,6 +574,7 @@ PlayerSpaceship::PlayerSpaceship()
     registerMemberReplication(&max_coolant);
     registerMemberReplication(&auto_coolant_enabled);
     registerMemberReplication(&beam_system_target);
+    registerMemberReplication(&veyra_comms_revision);
     registerMemberReplication(&comms_state);
     registerMemberReplication(&comms_open_delay, 1.0);
     registerMemberReplication(&comms_reply_message);
@@ -1260,6 +1262,7 @@ void PlayerSpaceship::removeCustom(string name)
 
 void PlayerSpaceship::setCommsMessage(string message)
 {
+    ++veyra_comms_revision;
     // Record a new comms message to the ship's log.
     for(string line : message.split("\n"))
         addToShipLog(line, glm::u8vec4(192, 192, 255, 255));
@@ -1383,6 +1386,13 @@ void PlayerSpaceship::onReceiveClientCommand(int32_t client_id, sp::io::DataBuff
     // the server only.
     int16_t command;
     packet >> command;
+
+    // Readers may not mutate the ship-wide dialogue, including opening/closing it.
+    if ((command == CMD_OPEN_TEXT_COMM || command == CMD_CLOSE_TEXT_COMM
+        || command == CMD_ANSWER_COMM_HAIL || command == CMD_SEND_TEXT_COMM
+        || command == CMD_SEND_TEXT_COMM_PLAYER)
+        && !veyraClientMayAnswer(client_id, getMultiplayerId()))
+        return;
 
     switch(command)
     {
@@ -1628,9 +1638,10 @@ void PlayerSpaceship::onReceiveClientCommand(int32_t client_id, sp::io::DataBuff
     case CMD_SEND_TEXT_COMM:
         if (comms_state == CS_ChannelOpen && comms_target)
         {
+            uint32_t revision;
             uint8_t index;
-            packet >> index;
-            if (index < comms_reply_id.size())
+            packet >> revision >> index;
+            if (revision == veyra_comms_revision && index < comms_reply_id.size())
             {
                 addToShipLog(comms_reply_message[index], colorConfig.log_send);
 
@@ -1844,6 +1855,10 @@ void PlayerSpaceship::onReceiveClientCommand(int32_t client_id, sp::io::DataBuff
             {
                 if (csf.name == name)
                 {
+                    if (csf.crew_position == relayOfficer
+                        && csf.type == CustomShipFunction::Type::Button
+                        && !veyraClientMayAnswer(client_id, getMultiplayerId()))
+                        return;
                     if (csf.type == CustomShipFunction::Type::Button)
                     {
                         auto cb = csf.callback;
@@ -2036,7 +2051,7 @@ void PlayerSpaceship::commandAnswerCommHail(bool awnser)
 void PlayerSpaceship::commandSendComm(uint8_t index)
 {
     sp::io::DataBuffer packet;
-    packet << CMD_SEND_TEXT_COMM << index;
+    packet << CMD_SEND_TEXT_COMM << veyra_comms_revision << index;
     sendClientCommand(packet);
 }
 

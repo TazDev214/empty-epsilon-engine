@@ -214,7 +214,7 @@ void PlayerInfo::spawnUI(int monitor_index, RenderLayer* render_layer)
         if (crew_position[databaseView] & (1 << monitor_index))
             screen->addStationTab(new DatabaseScreen(container), databaseView, getCrewPositionName(databaseView), getCrewPositionIcon(databaseView));
         if (crew_position[altRelay] & (1 << monitor_index))
-            screen->addStationTab(new RelayScreen(container, false), altRelay, getCrewPositionName(altRelay), getCrewPositionIcon(altRelay));
+            screen->addStationTab(new RelayScreen(container, false, true), altRelay, getCrewPositionName(altRelay), getCrewPositionIcon(altRelay));
         if (crew_position[commsOnly] & (1 << monitor_index))
             screen->addStationTab(new CommsScreen(container), commsOnly, getCrewPositionName(commsOnly), getCrewPositionIcon(commsOnly));
         if (crew_position[shipLog] & (1 << monitor_index))

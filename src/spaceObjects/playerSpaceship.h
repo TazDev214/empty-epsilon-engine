@@ -103,6 +103,7 @@ public:
 private:
     bool on_new_player_ship_called=false;
     // Comms variables
+    uint32_t veyra_comms_revision = 0;
     ECommsState comms_state;
     float comms_open_delay;
     string comms_target_name;

@@ -579,9 +579,53 @@ CrewPositionSelection::CrewPositionSelection(GuiContainer* owner, string id, int
     layout->setMargins(25, 50, 25, 0)->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax)->setAttribute("layout", "vertical");
     for(int n=int(singlePilot) + 1; n<int(max_crew_positions); n++)
     create_crew_position_button(layout, n);
+    // Veyra crews select a fixed bundle. Shared views never grant Relay rights.
+    standard_crew_panel->hide();
+    limited_crew_panel->hide();
+    alternative_options_panel->hide();
+    space_screens_panel->hide();
+    auto roles = new GuiPanel(left_container, "VEYRA_CREW_ROLES");
+    roles->setSize(GuiElement::GuiSizeMax, 450)->setAttribute("layout", "vertical");
+    (new GuiLabel(roles, "", "Besatzung und Rolle", 28))->setSize(GuiElement::GuiSizeMax, 50);
+    auto crew_size = new GuiSelector(roles, "VEYRA_CREW_SIZE", [](int index, string value) {
+        PreferencesManager::set("veyra_crew_size", value);
+    });
+    crew_size->addEntry("3 Spieler", "3");
+    crew_size->addEntry("4 Spieler", "4");
+    crew_size->setSelectionIndex(PreferencesManager::get("veyra_crew_size", "4") == "3" ? 0 : 1);
+    crew_size->setSize(GuiElement::GuiSizeMax, 50);
+    auto assign_role = [this](std::vector<ECrewPosition> selected) {
+        selected.push_back(databaseView);
+        selected.push_back(altRelay);
+        selected.push_back(commsOnly);
+        selected.push_back(shipLog);
+        for (int n = 0; n < max_crew_positions; n++)
+        {
+            const bool active = std::find(selected.begin(), selected.end(), ECrewPosition(n)) != selected.end();
+            crew_position_button[n]->setValue(active);
+            my_player_info->commandSetCrewPosition(window_index, ECrewPosition(n), active);
+        }
+        main_screen_button->setValue(false);
+        my_player_info->commandSetMainScreen(window_index, false);
+        my_player_info->commandSetMainScreenControl(window_index, false);
+        window_button->setValue(false);
+        topdown_button->setValue(false);
+    };
+    (new GuiButton(roles, "VEYRA_CAPTAIN", "Kapitaen: Science + Relay", [assign_role]() {
+        assign_role({scienceOfficer, relayOfficer});
+    }))->setSize(GuiElement::GuiSizeMax, 60);
+    (new GuiButton(roles, "VEYRA_PILOT", "Steuerung", [assign_role, crew_size]() {
+        assign_role({crew_size->getSelectionValue() == "3" ? tacticalOfficer : helmsOfficer});
+    }))->setSize(GuiElement::GuiSizeMax, 60);
+    (new GuiButton(roles, "VEYRA_ENGINEER", "Technik", [assign_role, crew_size]() {
+        assign_role({crew_size->getSelectionValue() == "3" ? engineeringAdvanced : engineering});
+    }))->setSize(GuiElement::GuiSizeMax, 60);
+    (new GuiButton(roles, "VEYRA_WEAPONS", "Waffen (nur 4er-Crew)", [assign_role, crew_size]() {
+        if (crew_size->getSelectionValue() == "4") assign_role({weaponsOfficer});
+    }))->setSize(GuiElement::GuiSizeMax, 60);
     // Info text panel
     auto info_panel = new GuiPanel(right_container,"");
-    station_info_text = tr("You can select multiple stations and switch between them during the game.\nIf mainscreen is selected alongside stations, it will be shown next to the current station (if the total screen size is wide enough).");
+    station_info_text = "Waehlt gemeinsam 3 oder 4 Spieler und eure festen Rollen.\n\nKapitaen: Science + Relay.\n3 Spieler: Steuerung/Waffen auf Tactical, Technik/Schilde auf Engineering+.\n4 Spieler: Steuerung, Waffen/Schilde und Technik getrennt.\n\nAlle erhalten Database, Strategic Map (nur Ansicht), Funk zum Mitlesen und Schiffslog. Nur der Kapitaen antwortet.\n\nProfil und exklusive Rollenbelegung im Prototyp gemeinsam abstimmen.";
     info_panel->setSize(GuiElement::GuiSizeMax, GuiElement::GuiSizeMax);
 
     station_info = new GuiScrollText(info_panel, "STATION_INFO", station_info_text);

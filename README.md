@@ -1,3 +1,9 @@
+# Veyra engine fork
+
+This branch contains the engine prototype for **Star Wars – Der Veyra-Korridor**. See [Veyra changes, Windows build instructions and validation status](README-VEYRA.md). Campaign content is maintained in the [separate mission repository](https://github.com/TazDev214/empty-epsilon). This is not yet a complete playable release.
+
+Original Empty Epsilon documentation follows.
+
 ![EmptyEpsilon logo](https://raw.githubusercontent.com/daid/EmptyEpsilon/master/resources/logo_full.png)
 
 Started as a cross-platform, open-source "clone" of [Artemis Spaceship Bridge Simulator](https://www.artemisspaceshipbridge.com/), **EmptyEpsilon** has already deviated from Artemis with new features and gameplay, including a Game Master mode and multiple AI factions. We strive to get EmptyEpsilon working on several platforms, and Windows, Linux, and Android are fully supported.

@@ -23,6 +23,7 @@ private:
         MoveWaypoint
     };
 
+    bool read_only;
     EMode mode;
     TargetsContainer targets;
     int drag_waypoint_index;
@@ -46,7 +47,7 @@ private:
 
     glm::vec2 mouse_down_position{};
 public:
-    RelayScreen(GuiContainer* owner, bool allow_comms);
+    RelayScreen(GuiContainer* owner, bool allow_comms, bool read_only = false);
 
     virtual void onDraw(sp::RenderTarget& target) override;
 };

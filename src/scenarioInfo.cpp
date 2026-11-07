@@ -158,8 +158,15 @@ const std::vector<ScenarioInfo>& ScenarioInfo::getScenarios()
         // remove duplicates
         scenario_filenames.erase(std::unique(scenario_filenames.begin(), scenario_filenames.end()), scenario_filenames.end());
 
+        const std::unordered_set<string> veyra_scenarios = {
+            "scenario_90_freier_sektor.lua", "scenario_91_flottenschau.lua",
+            "scenario_92_geheimbasis.lua", "scenario_93_fraktionstest.lua",
+            "scenario_94_imp_h01.lua", "scenario_95_imp_h02.lua",
+            "scenario_98_stationsanzeige.lua"
+        };
         for(string filename : scenario_filenames)
-            cached_full_list.emplace_back(filename);
+            if (veyra_scenarios.count(filename))
+                cached_full_list.emplace_back(filename);
     }
     return cached_full_list;
 }
